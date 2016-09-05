@@ -11,7 +11,7 @@ var escodegen = require('escodegen');
 function wrap(modName, mod) {
     // wrap the module code in a function declaration, set the exports alias (node.js) and return exported API
     var ast = estemplate('function <%= funName %>(module) {var exports = module.exports; %= body %; return module.exports}', {
-        funName: {type: 'Identifier', name: modName},
+        funName: {type: 'Identifier', name: 'mod_'.concat(modName)},
         body: mod.body
     });
 //    console.log(JSON.stringify(ast, null, 2));
@@ -24,7 +24,7 @@ function wrap(modName, mod) {
                     var reqModName = path.basename(node.arguments[0].value, '.js');
                     // replace it by a function call...
                     var replaced = estemplate('<%= modName %>({exports: {}});', {
-                        modName: {type: 'Identifier', name: reqModName}
+                        modName: {type: 'Identifier', name: 'mod_'.concat(reqModName)}
                     });
                     return replaced.body[0].expression;
                 }
@@ -50,7 +50,7 @@ md.pipe(concat(function (body) {
         program.body.push(wrap(name, ast));
     });
     var entryPoint = estemplate('<%= modName %>({exports: {}});', {
-        modName: {type: 'Identifier', name: entry}
+        modName: {type: 'Identifier', name: 'mod_'.concat(entry)}
     });
     program.body.push(entryPoint.body[0]);
 //    console.log(JSON.stringify(program, null, 2));
