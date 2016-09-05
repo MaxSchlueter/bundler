@@ -1,0 +1,22 @@
+{
+  "name": "bundler",
+  "version": "1.0.0",
+  "description": "bundle module code",
+  "main": "bundler.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Max Schlueter",
+  "license": "ISC",
+  "dependencies": {
+    "concat-stream": "^1.5.2",
+    "escodegen": "^1.8.1",
+    "esprima": "^2.7.3",
+    "estemplate": "^0.5.1",
+    "estraverse": "^4.2.0",
+    "module-deps": "^4.0.7"
+  }
+}
