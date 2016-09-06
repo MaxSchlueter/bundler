@@ -20,6 +20,10 @@ function wrap(modName, mod) {
         enter: function (node) {
             if (node.type === 'CallExpression') {
                 if (node.callee.name === 'require') {
+                    if (node.arguments[0].type !== 'Literal') {
+                        // Can't handle dynamic arguments to require
+                        return this.skip();
+                    }
                     // get the module name in the string argument of the require call
                     var reqModName = path.basename(node.arguments[0].value, '.js');
                     // replace it by a function call...
