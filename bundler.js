@@ -6,11 +6,12 @@ var estraverse = require('estraverse');
 var estemplate = require('estemplate');
 var escodegen = require('escodegen');
 
-var modIDtoName = {};
+var modIDtoName = Object.create(null);
+var dynamicRequires = false;
 
-function init(modsDep) {
+function initMap(moduleDeps) {
     var counter = 0;
-    modsDep.forEach(function (dep) {
+    moduleDeps.forEach(function (dep) {
         var name = path.basename(dep.id, '.js') + counter.toString();
         modIDtoName[dep.id] = name;
         counter++;
@@ -18,11 +19,11 @@ function init(modsDep) {
 //    console.log(modIDtoName);
 }
 
-function wrap(modID, modDeps, modAST) {
+function wrapModule(ID, dependencies, AST) {
     // wrap the module code in a function declaration, set the exports alias (node.js) and return exported API
     var ast = estemplate('function <%= modName %>(module) {var exports = module.exports; %= body %; return module.exports}', {
-        modName: {type: 'Identifier', name: modIDtoName[modID]},
-        body: modAST.body
+        modName: {type: 'Identifier', name: modIDtoName[ID]},
+        body: AST.body
     });
 //    console.log(JSON.stringify(ast, null, 2));
     // replace the require calls in the module by function calls
@@ -30,11 +31,13 @@ function wrap(modID, modDeps, modAST) {
         enter: function (node) {
             if (node.type === 'CallExpression' && node.callee.name === 'require') {
                 if (node.arguments[0].type !== 'Literal') {
-                    // Can't handle dynamic arguments to require
+                    var start = node.loc.start, end = node.loc.end;
+                    console.log(ID + ":" + start.line + ":" + start.column + ":" + end.line + ":" + end.column + ": dynamic require call.");
+                    dynamicRequires = true;
                     return this.skip();
                 }
                 // get the module name in the string argument of the require call
-                var reqModID = modDeps[node.arguments[0].value];
+                var reqModID = dependencies[node.arguments[0].value];
                 // replace it by a function call...
                 var replaced = estemplate('<%= modName %>({exports: {}});', {
                     modName: {type: 'Identifier', name: modIDtoName[reqModID]}
@@ -51,21 +54,24 @@ function wrap(modID, modDeps, modAST) {
 
 var md = mdeps();
 var file = path.resolve(process.argv[2]);
-md.pipe(concat(function (body) {
+md.pipe(concat(function (moduleDeps) {
     var entry;
     var program = { "type": "Program", "body": [], "sourceType": "script" };
-    init(body);
-    body.forEach(function (dep) {
-        var ast = esprima.parse(dep.source);
+    initMap(moduleDeps);
+    moduleDeps.forEach(function (dep) {
+        var ast = esprima.parse(dep.source, { loc: true });
         if (dep.entry)
             entry = dep.id;
-        program.body.push(wrap(dep.id, dep.deps, ast));
+        program.body.push(wrapModule(dep.id, dep.deps, ast));
     });
     var entryPoint = estemplate('<%= modName %>({exports: {}});', {
         modName: {type: 'Identifier', name: modIDtoName[entry]}
     });
     program.body.push(entryPoint.body[0]);
 //    console.log(JSON.stringify(program, null, 2));
-    console.log(escodegen.generate(program));
+    if (dynamicRequires)
+        console.error("Can't handle dynamic arguments to require calls. Consider refactoring the code.");
+    else
+        console.log(escodegen.generate(program));
 }));
 md.end(file);
