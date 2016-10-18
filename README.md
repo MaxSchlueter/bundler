@@ -1,5 +1,5 @@
 # Bundler
-Bundle CommonJS Modules into a single JS file s.t. the code can be analyzed statically.
+Bundle CommonJS Modules into a single JS file s.t. the module code can be analyzed statically.
 
 # Example
 Example in tests/modules/commonjs/ is the code sample found in http://wiki.commonjs.org/wiki/Modules/1.1
