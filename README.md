@@ -1,8 +1,8 @@
-# bundler
-Bundle CommonJS Modules into a single JS file to analyze it statically
+# Bundler
+Bundle CommonJS Modules into a single JS file s.t. the code can be analyzed statically.
 
-# example
-Example in tests/modules/commonjs/ is the sample code found in http://wiki.commonjs.org/wiki/Modules/1.1
+# Example
+Example in tests/modules/commonjs/ is the code sample found in http://wiki.commonjs.org/wiki/Modules/1.1
 ```
 $ node bundler.js tests/modules/commonjs/program.js
 function math0(module) {
@@ -34,7 +34,7 @@ function program2(module) {
 }
 program2({ exports: {} });
 ```
-If there are no dependency cycles and no dynamic require calls, the transformed code is semantically equivalent to the module code
+If there are no dependency cycles and no dynamic require calls, i.e. the argument to a require call is not a string literal, then the transformed code is semantically equivalent to the module code.
 ```
 $ node tests/modules/commonjs/program.js
 2
