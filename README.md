@@ -34,7 +34,7 @@ function program2(module) {
 }
 program2({ exports: {} });
 ```
-If there are no dependency cycles and no dynamic require calls, i.e. the argument to a require call is not a string literal, then the transformed code is semantically equivalent to the module code.
+If there are no dependency cycles and no dynamic require calls, i.e. the argument to a require call is not a string literal, then the transformed code is semantically equivalent to the module code:
 ```
 $ node tests/modules/commonjs/program.js
 2
