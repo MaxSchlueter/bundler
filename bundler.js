@@ -1,3 +1,5 @@
+'use strict'
+
 var path = require('path');
 var mdeps = require('module-deps');
 var concat = require('concat-stream');
@@ -26,19 +28,19 @@ function wrapModule(ID, dependencies, AST) {
         body: AST.body
     });
 //    console.log(JSON.stringify(ast, null, 2));
-    // replace the require calls in the module by function calls
+    // replace the require calls in the module code by function calls
     estraverse.replace(ast, {
         enter: function (node) {
             if (node.type === 'CallExpression' && node.callee.name === 'require') {
                 if (node.arguments[0].type !== 'Literal') {
                     var start = node.loc.start, end = node.loc.end;
-                    console.log(ID + ":" + start.line + ":" + start.column + ":" + end.line + ":" + end.column + ": dynamic require call.");
+                    console.warn(ID + ":" + start.line + ":" + start.column + ":" + end.line + ":" + end.column + ": dynamic require call.");
                     dynamicRequires = true;
                     return this.skip();
                 }
                 // get the module name in the string argument of the require call
                 var reqModID = dependencies[node.arguments[0].value];
-                // replace it by a function call...
+                // and replace it by a function call
                 var replaced = estemplate('<%= modName %>({exports: {}});', {
                     modName: {type: 'Identifier', name: modIDtoName[reqModID]}
                 });
