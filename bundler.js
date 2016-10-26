@@ -1,4 +1,4 @@
-'use strict'
+'use strict';
 
 var path = require('path');
 var mdeps = require('module-deps');
@@ -17,10 +17,10 @@ function initMap(moduleDeps) {
         var name;
         var ext = path.extname(dep.id);
         if (ext === '.js') {
-            name = path.basename(dep.id, '.js') + counter.toString();
+            name = '__mod__' + path.basename(dep.id, '.js') + counter.toString();
         }
         else if (ext === '.json') {
-            name = path.basename(dep.id, '.json') + counter.toString();
+            name = '__mod__' + path.basename(dep.id, '.json') + counter.toString();
         }
         else {
             throw ext + ' filename extension not supported';
@@ -28,7 +28,6 @@ function initMap(moduleDeps) {
         modIDtoName[dep.id] = name;
         counter++;
     });
-//    console.log(modIDtoName);
 }
 
 function wrapModule(module) {
@@ -38,7 +37,6 @@ function wrapModule(module) {
         modName: {type: 'Identifier', name: modIDtoName[module.id]},
         body: modAST.body
     });
-//    console.log(JSON.stringify(ast, null, 2));
     // replace the require calls in the module code by function calls
     estraverse.replace(ast, {
         enter: function (node) {
@@ -67,8 +65,6 @@ function wrapModule(module) {
             }
         }
     });
-//    console.log(JSON.stringify(ast, null, 2));
-//    console.log(escodegen.generate(ast));
     // return the AST of the module function declaration
     return ast.body[0];
 }
@@ -98,18 +94,20 @@ md.pipe(concat(function (moduleDeps) {
         else {
           ast = wrapModule(dep);
         }
-        if (dep.entry)
+        if (dep.entry) {
             entry = dep.id;
+        }
         program.body.push(ast);
     });
     var entryPoint = estemplate('<%= modName %>({exports: {}});', {
         modName: {type: 'Identifier', name: modIDtoName[entry]}
     });
     program.body.push(entryPoint.body[0]);
-//    console.log(JSON.stringify(program, null, 2));
-    if (dynamicRequires)
+    if (dynamicRequires) {
         throw "Can't handle dynamic arguments to require calls. Consider refactoring the code.";
-    else
+    }
+    else {
         console.log(escodegen.generate(program));
+    }
 }));
 md.end(file);
