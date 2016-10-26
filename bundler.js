@@ -14,7 +14,17 @@ var dynamicRequires = false;
 function initMap(moduleDeps) {
     var counter = 0;
     moduleDeps.forEach(function (dep) {
-        var name = path.basename(dep.id, '.js') + counter.toString();
+        var name;
+        var ext = path.extname(dep.id);
+        if (ext === '.js') {
+            name = path.basename(dep.id, '.js') + counter.toString();
+        }
+        else if (ext === '.json') {
+            name = path.basename(dep.id, '.json') + counter.toString();
+        }
+        else {
+            throw ext + ' filename extension not supported';
+        }
         modIDtoName[dep.id] = name;
         counter++;
     });
@@ -41,9 +51,17 @@ function wrapModule(ID, dependencies, AST) {
                 // get the module name in the string argument of the require call
                 var reqModID = dependencies[node.arguments[0].value];
                 // and replace it by a function call
-                var replaced = estemplate('<%= modName %>({exports: {}});', {
-                    modName: {type: 'Identifier', name: modIDtoName[reqModID]}
-                });
+                var replaced;
+                if (path.extname(reqModID) === '.json') {
+                  replaced = estemplate('<%= modName %>();', {
+                      modName: {type: 'Identifier', name: modIDtoName[reqModID]}
+                  });
+                }
+                else {
+                  replaced = estemplate('<%= modName %>({exports: {}});', {
+                      modName: {type: 'Identifier', name: modIDtoName[reqModID]}
+                  });
+                }
                 return replaced.body[0].expression;
             }
         }
@@ -54,6 +72,17 @@ function wrapModule(ID, dependencies, AST) {
     return ast.body[0];
 }
 
+function wrapJSONModule(module) {
+    // a hack to parse json in esprima
+    var expr = esprima.parse('(' + module.source + ');');
+    var jsonAST = expr.body[0].expression;
+    var ast = estemplate('function <%= modName %>() { return <%= object %>; }', {
+        modName: {type: 'Identifier', name: modIDtoName[module.id]},
+        object: jsonAST
+    });
+    return ast.body[0];
+}
+
 var md = mdeps();
 var file = path.resolve(process.argv[2]);
 md.pipe(concat(function (moduleDeps) {
@@ -61,10 +90,17 @@ md.pipe(concat(function (moduleDeps) {
     var program = { "type": "Program", "body": [], "sourceType": "script" };
     initMap(moduleDeps);
     moduleDeps.forEach(function (dep) {
-        var ast = esprima.parse(dep.source, { loc: true });
+        var ast;
+        if (path.extname(dep.id) === '.json') {
+          ast = wrapJSONModule(dep);
+        }
+        else {
+          ast = esprima.parse(dep.source, { loc: true });
+          ast = wrapModule(dep.id, dep.deps, ast);
+        }
         if (dep.entry)
             entry = dep.id;
-        program.body.push(wrapModule(dep.id, dep.deps, ast));
+        program.body.push(ast);
     });
     var entryPoint = estemplate('<%= modName %>({exports: {}});', {
         modName: {type: 'Identifier', name: modIDtoName[entry]}
@@ -72,7 +108,7 @@ md.pipe(concat(function (moduleDeps) {
     program.body.push(entryPoint.body[0]);
 //    console.log(JSON.stringify(program, null, 2));
     if (dynamicRequires)
-        console.error("Can't handle dynamic arguments to require calls. Consider refactoring the code.");
+        throw "Can't handle dynamic arguments to require calls. Consider refactoring the code.";
     else
         console.log(escodegen.generate(program));
 }));
