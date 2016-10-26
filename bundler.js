@@ -31,11 +31,12 @@ function initMap(moduleDeps) {
 //    console.log(modIDtoName);
 }
 
-function wrapModule(ID, dependencies, AST) {
+function wrapModule(module) {
+    var modAST = esprima.parse(module.source, { loc: true });
     // wrap the module code in a function declaration, set the exports alias (node.js) and return exported API
     var ast = estemplate('function <%= modName %>(module) {var exports = module.exports; %= body %; return module.exports}', {
-        modName: {type: 'Identifier', name: modIDtoName[ID]},
-        body: AST.body
+        modName: {type: 'Identifier', name: modIDtoName[module.id]},
+        body: modAST.body
     });
 //    console.log(JSON.stringify(ast, null, 2));
     // replace the require calls in the module code by function calls
@@ -44,12 +45,12 @@ function wrapModule(ID, dependencies, AST) {
             if (node.type === 'CallExpression' && node.callee.name === 'require') {
                 if (node.arguments[0].type !== 'Literal') {
                     var start = node.loc.start, end = node.loc.end;
-                    console.warn(ID + ":" + start.line + ":" + start.column + ":" + end.line + ":" + end.column + ": dynamic require call.");
+                    console.warn(module.id + ":" + start.line + ":" + start.column + ":" + end.line + ":" + end.column + ": dynamic require call.");
                     dynamicRequires = true;
                     return this.skip();
                 }
                 // get the module name in the string argument of the require call
-                var reqModID = dependencies[node.arguments[0].value];
+                var reqModID = module.deps[node.arguments[0].value];
                 // and replace it by a function call
                 var replaced;
                 if (path.extname(reqModID) === '.json') {
@@ -95,8 +96,7 @@ md.pipe(concat(function (moduleDeps) {
           ast = wrapJSONModule(dep);
         }
         else {
-          ast = esprima.parse(dep.source, { loc: true });
-          ast = wrapModule(dep.id, dep.deps, ast);
+          ast = wrapModule(dep);
         }
         if (dep.entry)
             entry = dep.id;
