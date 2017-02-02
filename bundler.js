@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 'use strict';
 
 var path = require('path');
@@ -11,16 +12,32 @@ var escodegen = require('escodegen');
 var modIDtoName = Object.create(null);
 var dynamicRequires = false;
 
+// core modules for node.js v0.12.7
+// https://github.com/nodejs/node/blob/db1087c9757c31a82c50a1eba368d8cba95b57d0/lib/internal/module.js
+
+var builtins = ['assert', 'buffer', 'child_process', 'cluster',
+  'crypto', 'dgram', 'dns', 'domain', 'events', 'fs', 'http', 'https', 'net',
+  'os', 'path', 'punycode', 'querystring', 'readline', 'repl', 'stream',
+  'string_decoder', 'tls', 'tty', 'url', 'util', 'v8', 'vm', 'zlib'];
+
+// function filter (id) {
+//     return !builtins.some(function (mod) {
+//         return id.startsWith(mod);
+//     });
+// }
+
 function initMap(moduleDeps) {
-    var counter = 0;
+    var counter = 1;
     moduleDeps.forEach(function (dep) {
         var name;
         var ext = path.extname(dep.id);
         if (ext === '.js') {
-            name = '__mod__' + path.basename(dep.id, '.js') + counter.toString();
+            name = path.basename(dep.id, '.js').replace(/-/g, '_');
+            name = '_mod_' + name + counter.toString();
         }
         else if (ext === '.json') {
-            name = '__mod__' + path.basename(dep.id, '.json') + counter.toString();
+            name = path.basename(dep.id, '.json').replace(/-/g, '_');
+            name = '_mod_' + name + counter.toString();
         }
         else {
             throw ext + ' filename extension not supported';
@@ -49,6 +66,8 @@ function wrapModule(module) {
                 }
                 // get the module name in the string argument of the require call
                 var reqModID = module.deps[node.arguments[0].value];
+                // if required module is a node.js module, skip
+                if (!reqModID) return this.skip();
                 // and replace it by a function call
                 var replaced;
                 if (path.extname(reqModID) === '.json') {
@@ -80,8 +99,9 @@ function wrapJSONModule(module) {
     return ast.body[0];
 }
 
-var md = mdeps();
+var md = mdeps({ filter: function (id) { return builtins.indexOf(id) < 0; }});
 var file = path.resolve(process.argv[2]);
+
 md.pipe(concat(function (moduleDeps) {
     var entry;
     var program = { "type": "Program", "body": [], "sourceType": "script" };
