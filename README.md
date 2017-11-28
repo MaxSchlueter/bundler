@@ -1,4 +1,4 @@
-# Bundler
+# sPack
 Bundle CommonJS Modules into a single JS file s.t. the module code can be analyzed statically.
 
 # Example
