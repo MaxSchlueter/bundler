@@ -1,8 +1,8 @@
 {
-  "name": "bundler",
+  "name": "spack",
   "version": "1.0.0",
   "description": "bundle module code",
-  "main": "bundler.js",
+  "main": "index.js",
   "directories": {
     "test": "test"
   },
@@ -17,6 +17,8 @@
     "esprima": "^2.7.3",
     "estemplate": "^0.5.1",
     "estraverse": "^4.2.0",
-    "module-deps": "^4.0.7"
+    "minimist": "^1.2.0",
+    "module-deps": "^4.0.7",
+    "xtend": "^4.0.1"
   }
 }
