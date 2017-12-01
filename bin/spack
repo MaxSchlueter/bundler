@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+
 var spack = require('..');
 var minimist = require('minimist');
 var path = require('path');
@@ -7,12 +8,13 @@ var argv = minimist(process.argv.slice(2), {
     alias: { t: 'transform', g: 'globalTransform' }
 });
 
-debugger
 if (argv._.length !== 1) {
   return console.error('Usage: spack path/to/module.js')
 }
 var file = path.resolve(argv._[0]);
 
-var sp = spack(argv);
-
-sp.end(file);
+spack(file, argv).then(function (bundle) {
+	console.log(bundle);
+}).catch(function (err) {
+	console.error(err);
+})
